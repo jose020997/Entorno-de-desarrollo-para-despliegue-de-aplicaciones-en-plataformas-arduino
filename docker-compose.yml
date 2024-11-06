@@ -1,0 +1,63 @@
+version: '2.1'
+
+services:
+  nginx:
+     build: ./nginx
+     container_name: reverse_proxy
+     restart: always
+     volumes:
+       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+     ports:
+       - "80:80"
+       - "443:443"
+     networks:
+      - telemetry  
+
+  blocklyduino:
+    build: ./blocklyduino
+    container_name: blocklyduino
+    restart: always
+    ports:
+      - "5000:5000"
+    networks:
+     - telemetry
+
+  hivemq:
+    image: hivemq/hivemq4
+    ports:
+      - "4500:8080"
+      - "1883:1883"
+      - "8000:8000"
+    networks:
+      - telemetry
+    container_name: Hive_MQTT2
+
+  flask_peticion:
+    build: ./flask2
+    container_name: Flask_peticion
+    restart: always
+    ports:
+      - "82:80"
+    networks:
+    - telemetry  
+  
+  react_front:
+    build:
+      context: ./black
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    networks:
+      - telemetry
+    volumes:
+      - ./black:/black
+    command: npm run start
+    container_name: react_frontal
+
+
+networks:
+  telemetry:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.238.0/24      

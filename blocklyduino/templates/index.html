@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@4.5.2/dist/cerulean/bootstrap.min.css" integrity="sha384-3fdgwJw17Bi87e1QQ4fsLn4rUFqWw//KU0g8TvV6quvahISRewev6/EocKNuJmEw" crossorigin="anonymous">
+    <title>Formulario Simple</title>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6 offset-md-3">
+                <br><br>
+                <h2>Visualización de datos</h2>
+                <br>
+                <form action="/datos" method="post" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="host">Dirección de la Base de Datos</label>
+                        <input type="text" class="form-control" id="host" name="host">
+                    </div>
+                    <div class="form-group">
+                        <label for="usuario">Usuario</label>
+                        <input type="text" class="form-control" id="usuario" name="usuario">
+                    </div>
+                    <div class="form-group">
+                        <label for="clave">Contraseña</label>
+                        <input type="password" class="form-control" id="clave" name="clave">
+                    </div>
+                    <div class="form-group">
+                        <label for="tb">Tabla de la base de datos</label>
+                        <input type="text" class="form-control" id="tb" name="tb" placeholder="arduino_eps32">
+                    </div>
+                    <p>Campos que queremos mostrar</p>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input" id="temperatura" name="medidas" value="temperatura">
+                        <label class="form-check-label" for="temperatura">Temperatura</label>
+                    </div>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input" id="humedad" name="medidas" value="humedad">
+                        <label class="form-check-label" for="humedad">Humedad</label>
+                    </div>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input" id="viento" name="medidas" value="viento">
+                        <label class="form-check-label" for="viento">Viento</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Continuar</button>
+                </form>
+		<br>
+                <button onclick="location.href='/blockly'" class="btn btn-secondary btn-block">No quiero usar el servicio de Google Cloud</button>
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>

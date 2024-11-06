@@ -1,0 +1,11 @@
+Flask==2.1.0
+flask_cors==3.0.10
+google-api-core==2.19.1
+google-auth==2.31.0
+google-cloud-pubsub==2.21.5
+googleapis-common-protos==1.63.2
+requests==2.26.0
+mysql-connector
+python-dotenv
+jsonify
+datetime

@@ -1,0 +1,93 @@
+<html>
+  <head>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js" type="text/javascript"></script>
+   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+   <script type = "text/javascript" language = "javascript">
+      var mqtt;
+      var reconnectTimeout = 2000;
+      var host = "<%= host %>";
+      var topic = "<%= topic %>";
+      var port = 8000;
+      var charts = ['temp', 'humd'];
+      const rows = charts.length, columns = 120;
+
+      const matrix = Array(rows).fill().map(() => {
+        var res = new Array();
+        for (var iter=0;iter<columns;iter++)
+          res[iter] = [new Date(new Date().getTime()-1000*(columns-iter)),0];
+        return res;
+      });
+
+      var options = {
+          backgroundColor: '#f1f8e9',
+          hAxis: {format: 'h:m:s', title: 'Tiempo'},
+      };
+
+      google.charts.load('current', {packages: ['corechart', 'line']});
+      google.charts.setOnLoadCallback(chart);
+
+      function onFailure(message) {
+          setTimeout(MQTTconnect, reconnectTimeout);
+      }
+
+      function onMessageArrived(msg){
+        var json_payload = JSON.parse(msg.payloadString);
+        var len = Object.keys(json_payload).length;
+        var vector = new Array(len);
+        for (var iter=0;iter<len; iter++){
+          vector[iter] = json_payload[charts[iter]];
+        }
+        chart(vector);
+      }
+
+      function onConnect() {
+        mqtt.subscribe(topic);
+      }
+
+      function MQTTconnect() {
+        mqtt = new Paho.MQTT.Client(host,port,"id-"+Math.floor(Math.random()*10000));
+        var options = {
+          timeout: 3,
+          userName : "",
+          password : "",
+          onSuccess: onConnect,
+          onFailure: onFailure,
+           };
+        mqtt.onMessageArrived = onMessageArrived;
+        mqtt.connect(options);
+      }
+
+      function chart(t) {
+	      var param = new Array(charts.length).fill(0);
+        if (t!=undefined) param=t;
+        for (item in charts) {
+	  	    var chart_name = "chart_div" + item;
+		      var data = new google.visualization.DataTable();
+          data.addColumn('date', "Time");
+          data.addColumn('number', charts[item]);
+          for (var iter=0;iter<columns-1;iter++){
+            matrix[item][iter] = matrix[item][iter+1];
+            data.addRow(matrix[item][iter]);
+          }
+          matrix[item][iter] = [new Date(), param[item]];
+          data.addRow(matrix[item][iter]);
+	        var chart = new google.visualization.LineChart(document.getElementById(chart_name));
+          chart.draw(data, options);
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <h2 id="sensor" align="center"></h1>
+    <script>
+      document.getElementById("sensor").innerHTML = "Sensor: " + topic;
+       for (item in charts) {
+        var div = document.createElement('div');
+	      var chart_name = "chart_div" + item;
+	      div.id = chart_name;
+	      document.body.appendChild(div);
+      }
+      MQTTconnect();
+    </script>
+  </body>
+</html>

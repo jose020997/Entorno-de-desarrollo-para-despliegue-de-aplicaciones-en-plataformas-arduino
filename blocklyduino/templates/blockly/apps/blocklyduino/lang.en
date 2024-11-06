@@ -1,0 +1,17 @@
+{
+"project_title": "Visual programming editor for Arduino",
+"blocks": "Blocks",
+"arduino": "Arduino",
+"monitor": "Monitor",
+"output": "Output",
+"load": "Load",
+"save": "Save",
+"discard": "Discard",
+"savecode": "Save code",
+"upload": "Upload",
+"save_text": "What's your filename?",
+"discard_text": "Erase all the blocks? (",
+"savecode_text": "What's your filename?",
+"agent_connected": "Connected to arduino agent",
+"compiling": "Transferring code and compiling..."
+}

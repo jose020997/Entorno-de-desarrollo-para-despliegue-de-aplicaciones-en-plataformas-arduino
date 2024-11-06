@@ -1,0 +1,163 @@
+version: "3"
+
+tasks:
+  # Source: https://github.com/arduino/tooling-project-assets/blob/main/workflow-templates/assets/check-dependencies-task/Taskfile.yml
+  general:cache-dep-licenses:
+    desc: Cache dependency license metadata
+    cmds:
+      - |
+        if ! which licensed &>/dev/null; then
+          if [[ {{OS}} == "windows" ]]; then
+            echo "Licensed does not have Windows support."
+            echo "Please use Linux/macOS or download the dependencies cache from the GitHub Actions workflow artifact."
+          else
+            echo "licensed not found or not in PATH. Please install: https://github.com/github/licensed#as-an-executable"
+          fi
+          exit 1
+        fi
+      - licensed cache
+
+  # Source: https://github.com/arduino/tooling-project-assets/blob/main/workflow-templates/assets/check-dependencies-task/Taskfile.yml
+  general:check-dep-licenses:
+    desc: Check for unapproved dependency licenses
+    deps:
+      - task: general:cache-dep-licenses
+    cmds:
+      - licensed status
+
+  # Source: https://github.com/arduino/tooling-project-assets/blob/main/workflow-templates/assets/go-task/Taskfile.yml
+  go:build:
+    desc: Build the project, to use a specific version use `task build TAG_VERSION=x.x.x`
+    dir: "{{.DEFAULT_GO_MODULE_PATH}}"
+    cmds:
+      - go build -v {{.ADDITIONAL_FLAGS}} -o {{.PROJECT_NAME}} {{.LDFLAGS}} {{.WIN_FLAGS}}'
+
+  go:build-cli:
+    desc: Build the project without tray icon support
+    cmds:
+      - task: go:build
+        vars:
+          PROJECT_NAME: arduino-cloud-agent_cli
+          ADDITIONAL_FLAGS: -tags cli
+
+  go:build-win:
+    desc: Build the project for win, to build 32bit `export GOARCH=386` and for 64 bit `export GOARCH=amd64` before `task build-win`
+    cmds:
+      - rsrc -arch {{.GOARCH}} -manifest manifest.xml # GOARCH shoud be either amd64 or 386
+      - task: go:build
+        vars:
+          PROJECT_NAME: arduino-cloud-agent.exe
+          WIN_FLAGS: -H=windowsgui
+      - rm *.syso # rm file to avoid compilation problems on other platforms
+    vars:
+      GOARCH:
+        sh: go env GOARCH
+
+  go:build-win-cli:
+    desc: Build the project for win without tray icon support
+    cmds:
+      - task: go:build
+        vars:
+          PROJECT_NAME: arduino-cloud-agent_cli.exe
+          ADDITIONAL_FLAGS: -tags cli
+
+  # Source: https://github.com/arduino/tooling-project-assets/blob/main/workflow-templates/assets/test-go-task/Taskfile.yml
+  go:test:
+    desc: Run unit tests
+    dir: "{{default .DEFAULT_GO_MODULE_PATH .GO_MODULE_PATH}}"
+    cmds:
+      - |
+        go test \
+          -v \
+          -short \
+          -run '{{default ".*" .GO_TEST_REGEX}}' \
+          {{default "-timeout 10m -coverpkg=./... -covermode=atomic" .GO_TEST_FLAGS}} \
+          -coverprofile=coverage_unit.txt \
+          {{default .DEFAULT_GO_PACKAGES .GO_PACKAGES}}
+
+  # Source: https://github.com/arduino/tooling-project-assets/blob/main/workflow-templates/assets/test-go-integration-task/Taskfile.yml
+  go:test-integration:
+    desc: Run integration tests
+    deps:
+      # - task: go:build # we build it in the CI and not in the task because _cli version is required and build procedure is different on win
+      - task: poetry:install-deps
+    cmds:
+      - poetry run pytest tests
+
+    # Source: https://github.com/arduino/tooling-project-assets/blob/main/workflow-templates/assets/poetry-task/Taskfile.yml
+  poetry:install-deps:
+    desc: Install dependencies managed by Poetry
+    cmds:
+      - poetry install --no-root
+
+  # Source: https://github.com/arduino/tooling-project-assets/blob/main/workflow-templates/assets/poetry-task/Taskfile.yml
+  poetry:update-deps:
+    desc: Update all dependencies managed by Poetry to their newest versions
+    cmds:
+      - poetry update
+
+  # Source: https://github.com/arduino/tooling-project-assets/blob/main/workflow-templates/assets/check-go-task/Taskfile.yml
+  go:fix:
+    desc: Modernize usages of outdated APIs
+    dir: "{{default .DEFAULT_GO_MODULE_PATH .GO_MODULE_PATH}}"
+    cmds:
+      - go fix {{default .DEFAULT_GO_PACKAGES .GO_PACKAGES}}
+
+  # Source: https://github.com/arduino/tooling-project-assets/blob/main/workflow-templates/assets/check-go-task/Taskfile.yml
+  go:format:
+    desc: Format Go code
+    dir: "{{default .DEFAULT_GO_MODULE_PATH .GO_MODULE_PATH}}"
+    cmds:
+      - go fmt {{default .DEFAULT_GO_PACKAGES .GO_PACKAGES}}
+
+  # Source: https://github.com/arduino/tooling-project-assets/blob/main/workflow-templates/assets/check-go-task/Taskfile.yml
+  go:lint:
+    desc: Lint Go code
+    dir: "{{default .DEFAULT_GO_MODULE_PATH .GO_MODULE_PATH}}"
+    cmds:
+      - |
+        if ! which golint &>/dev/null; then
+          echo "golint not installed or not in PATH. Please install: https://github.com/golang/lint#installation"
+          exit 1
+        fi
+      - |
+        golint \
+          {{default "-min_confidence 0.8 -set_exit_status" .GO_LINT_FLAGS}} \
+          {{default .DEFAULT_GO_PACKAGES .GO_PACKAGES}}
+
+  # Source: https://github.com/arduino/tooling-project-assets/blob/main/workflow-templates/assets/check-go-task/Taskfile.yml
+  go:vet:
+    desc: Check for errors in Go code
+    dir: "{{default .DEFAULT_GO_MODULE_PATH .GO_MODULE_PATH}}"
+    cmds:
+      - go vet {{default .DEFAULT_GO_PACKAGES .GO_PACKAGES}}
+
+  check:
+    desc: Check fmt and lint
+    cmds:
+      - task: go:vet
+      - task: go:lint
+
+vars:
+  # Source: https://github.com/arduino/tooling-project-assets/blob/main/workflow-templates/assets/release-go-task/Taskfile.yml
+  PROJECT_NAME: arduino-cloud-agent
+  # build vars
+  COMMIT:
+    sh: echo "$(git log --no-show-signature -n 1 --format=%h)"
+  TIMESTAMP_SHORT:
+    sh: echo "{{now | date "20060102"}}"
+  TAG:
+    sh: echo "$(git tag --points-at=HEAD 2> /dev/null | head -n1)"
+  TAG_TEST: "0.0.0-dev"
+  VERSION: "{{if .NIGHTLY}}nightly-{{.TIMESTAMP_SHORT}}{{else if .TAG}}{{.TAG}}{{else}}{{.TAG_TEST}}{{end}}"
+  CONFIGURATION_PACKAGE: main
+  LDFLAGS: >-
+    -ldflags
+    '
+    -X {{.CONFIGURATION_PACKAGE}}.version={{.VERSION}}
+    -X {{.CONFIGURATION_PACKAGE}}.commit={{.COMMIT}}
+  # Path of the project's primary Go module:
+  DEFAULT_GO_MODULE_PATH: ./
+  DEFAULT_GO_PACKAGES:
+    sh: |
+      echo $(cd {{default .DEFAULT_GO_MODULE_PATH .GO_MODULE_PATH}} && go list ./... | grep -v 'arduino-create-agent/gen/' | grep -v 'arduino-create-agent/design' | tr '\n' ' ' || echo '"ERROR: Unable to discover Go packages"')
