@@ -4,6 +4,8 @@ Dentro de la carpeta black ejecutar
 
 npm install
 
+docker-compose up --build -d
+
 
 importante si falla instalara bibliotecas globales para que funcionen google cloud y firebase
 
